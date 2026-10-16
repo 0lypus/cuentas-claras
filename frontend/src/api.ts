@@ -14,6 +14,14 @@ export type NuevoGasto = {
   pagadoPorId: number;
   participantesIds: number[];
 };
+export type Gasto = {
+  id: number;
+  descripcion: string;
+  monto: number;
+  pagadoPor: string;
+  participantes: string[];
+  fecha: string;
+};
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API}${path}`, {
@@ -21,9 +29,10 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     ...options,
   });
   if (!res.ok) {
-    if (res.status === 404) throw new Error("No se encontró el grupo.");
+    if (res.status === 404) throw new Error("No se encontró lo que buscabas.");
     throw new Error((await res.text()) || `Error ${res.status}`);
   }
+  if (res.status === 204) return undefined as T;
   return res.json();
 }
 
@@ -44,6 +53,12 @@ export const agregarGasto = (codigo: string, gasto: NuevoGasto) =>
     method: "POST",
     body: JSON.stringify(gasto),
   });
+
+export const listarGastos = (codigo: string) =>
+  request<Gasto[]>(`/api/grupos/${codigo}/gastos`);
+
+export const eliminarGasto = (codigo: string, id: number) =>
+  request<void>(`/api/grupos/${codigo}/gastos/${id}`, { method: "DELETE" });
 
 export const obtenerSaldos = (codigo: string) =>
   request<Transferencia[]>(`/api/grupos/${codigo}/saldos`);

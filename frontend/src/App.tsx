@@ -3,8 +3,11 @@ import {
   agregarGasto,
   agregarMiembro,
   crearGrupo,
+  eliminarGasto,
+  listarGastos,
   obtenerGrupo,
   obtenerSaldos,
+  type Gasto,
   type Grupo,
   type Transferencia,
 } from "./api";
@@ -114,6 +117,7 @@ function GrupoView({
   const [pagadoPorId, setPagadoPorId] = useState("");
   const [excluidos, setExcluidos] = useState<number[]>([]);
   const [saldos, setSaldos] = useState<Transferencia[]>([]);
+  const [gastos, setGastos] = useState<Gasto[]>([]);
   const [error, setError] = useState("");
   const [copiado, setCopiado] = useState(false);
 
@@ -122,10 +126,19 @@ function GrupoView({
   const participantesIds = grupo.miembros.filter((m) => !excluidos.includes(m.id)).map((m) => m.id);
 
   useEffect(() => {
-    obtenerSaldos(codigo)
-      .then(setSaldos)
+    Promise.all([obtenerSaldos(codigo), listarGastos(codigo)])
+      .then(([s, g]) => {
+        setSaldos(s);
+        setGastos(g);
+      })
       .catch((e) => setError(e.message));
   }, [codigo]);
+
+  async function refrescar() {
+    const [s, g] = await Promise.all([obtenerSaldos(codigo), listarGastos(codigo)]);
+    setSaldos(s);
+    setGastos(g);
+  }
 
   async function onAgregarMiembro() {
     try {
@@ -149,7 +162,18 @@ function GrupoView({
       });
       setDescripcion("");
       setMonto("");
-      setSaldos(await obtenerSaldos(codigo));
+      await refrescar();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
+  async function onEliminarGasto(g: Gasto) {
+    if (!window.confirm(`¿Borrar "${g.descripcion}" (${plata.format(g.monto)})?`)) return;
+    try {
+      setError("");
+      await eliminarGasto(codigo, g.id);
+      await refrescar();
     } catch (e) {
       setError((e as Error).message);
     }
@@ -246,6 +270,28 @@ function GrupoView({
           {saldos.map((t, i) => (
             <li key={i}>
               <strong>{t.de}</strong> le paga a <strong>{t.a}</strong> {plata.format(t.monto)}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <h3>Historial de gastos</h3>
+      {gastos.length === 0 ? (
+        <p>Todavía no se cargó ningún gasto.</p>
+      ) : (
+        <ul style={{ paddingLeft: 0, listStyle: "none" }}>
+          {gastos.map((g) => (
+            <li key={g.id} style={{ padding: "8px 0", borderBottom: "1px solid #ddd" }}>
+              <div>
+                <strong>{g.descripcion}</strong> · {plata.format(g.monto)}{" "}
+                <button onClick={() => onEliminarGasto(g)} title="Borrar gasto">
+                  🗑
+                </button>
+              </div>
+              <small>
+                Pagó {g.pagadoPor} · entre {g.participantes.join(", ")} ·{" "}
+                {new Date(g.fecha).toLocaleDateString("es-AR")}
+              </small>
             </li>
           ))}
         </ul>

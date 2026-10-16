@@ -7,3 +7,5 @@ public record CrearGastoRequest(string Descripcion, decimal Monto, int PagadoPor
 public record MiembroDto(int Id, string Nombre);
 public record GrupoDto(int Id, string Nombre, string CodigoInvitacion, List<MiembroDto> Miembros);
 public record GastoDto(int Id, string Descripcion, decimal Monto, string PagadoPor, DateTime Fecha);
+
+public record GastoListadoDto(int Id, string Descripcion, decimal Monto, string PagadoPor, List<string> Participantes, DateTime Fecha);

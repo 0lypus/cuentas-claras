@@ -58,6 +58,42 @@ public class GruposController(CuentasClarasDbContext db) : ControllerBase
         return Ok(new MiembroDto(miembro.Id, miembro.Nombre));
     }
 
+
+    [HttpGet("{codigo}/gastos")]
+    public async Task<ActionResult<List<GastoListadoDto>>> ListarGastos(string codigo)
+    {
+        var grupo = await db.Grupos.AsNoTracking()
+            .FirstOrDefaultAsync(g => g.CodigoInvitacion == codigo);
+        if (grupo is null) return NotFound();
+
+        return await db.Gastos
+            .AsNoTracking()
+            .Where(g => g.GrupoId == grupo.Id)
+            .OrderByDescending(g => g.Id)
+            .Select(g => new GastoListadoDto(
+                g.Id,
+                g.Descripcion,
+                g.Monto,
+                g.PagadoPor.Nombre,
+                g.Participantes.Select(p => p.Nombre).ToList(),
+                g.Fecha))
+            .ToListAsync();
+    }
+
+    [HttpDelete("{codigo}/gastos/{id:int}")]
+    public async Task<IActionResult> EliminarGasto(string codigo, int id)
+    {
+        var gasto = await db.Gastos
+            .FirstOrDefaultAsync(g => g.Id == id && g.Grupo.CodigoInvitacion == codigo);
+        if (gasto is null) return NotFound();
+
+        db.Gastos.Remove(gasto);
+        await db.SaveChangesAsync();
+        return NoContent();
+    }
+
+
+
     [HttpPost("{codigo}/gastos")]
     public async Task<ActionResult<GastoDto>> AgregarGasto(string codigo, CrearGastoRequest req)
     {
