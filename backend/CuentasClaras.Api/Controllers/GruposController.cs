@@ -150,6 +150,27 @@ public class GruposController(CuentasClarasDbContext db) : ControllerBase
         return SimplificadorDeDeudas.Calcular(gastos);
     }
 
+
+    [HttpGet("{codigo}/balances")]
+    public async Task<ActionResult<List<Balance>>> Balances(string codigo)
+    {
+        var grupo = await db.Grupos
+            .AsNoTracking()
+            .AsSplitQuery()
+            .Include(g => g.Miembros)
+            .Include(g => g.Gastos).ThenInclude(x => x.PagadoPor)
+            .Include(g => g.Gastos).ThenInclude(x => x.Participantes)
+            .FirstOrDefaultAsync(g => g.CodigoInvitacion == codigo);
+        if (grupo is null) return NotFound();
+
+        var gastos = grupo.Gastos.Select(x => new Gasto(
+            x.PagadoPor.Nombre,
+            x.Monto,
+            x.Participantes.Select(p => p.Nombre).ToList()));
+
+        return SimplificadorDeDeudas.CalcularBalances(gastos, grupo.Miembros.Select(m => m.Nombre));
+    }
+
     private static GrupoDto ToDto(Grupo g) => new(
         g.Id,
         g.Nombre,

@@ -4,76 +4,70 @@ namespace CuentasClaras.Core.Services;
 
 public static class SimplificadorDeDeudas
 {
-    public static List<Transferencia> Calcular(IEnumerable<Gasto> gastos)
+    public static List<Balance> CalcularBalances(IEnumerable<Gasto> gastos, IEnumerable<string>? miembros = null)
     {
-        ArgumentNullException.ThrowIfNull(gastos);
+        var pagado = new Dictionary<string, decimal>();
+        var corresponde = new Dictionary<string, decimal>();
 
-        var saldos = new Dictionary<string, decimal>(StringComparer.Ordinal);
+        // Así aparecen también los miembros que todavía no participaron de ningún gasto
+        foreach (var nombre in miembros ?? Array.Empty<string>())
+        {
+            pagado[nombre] = 0m;
+            corresponde[nombre] = 0m;
+        }
 
         foreach (var gasto in gastos)
         {
-            if (gasto is null)
-                continue;
-
-            var participantes = gasto.Participantes?.Distinct().ToList() ?? [];
-
-            if (participantes.Count == 0)
+            if (gasto.Participantes.Count == 0)
                 throw new ArgumentException("Un gasto necesita al menos un participante.");
 
-            var parte = decimal.Round(gasto.Monto / participantes.Count, 2, MidpointRounding.ToZero);
-            var resto = gasto.Monto - (parte * participantes.Count);
+            // Parte por persona truncada a centavos; el resto va al primer participante
+            var parte = Math.Round(gasto.Monto / gasto.Participantes.Count, 2, MidpointRounding.ToZero);
+            var resto = gasto.Monto - parte * gasto.Participantes.Count;
 
-            saldos[gasto.PagadoPor] = saldos.GetValueOrDefault(gasto.PagadoPor) + gasto.Monto;
+            pagado[gasto.PagadoPor] = pagado.GetValueOrDefault(gasto.PagadoPor) + gasto.Monto;
 
-            for (var i = 0; i < participantes.Count; i++)
+            for (var i = 0; i < gasto.Participantes.Count; i++)
             {
-                var nombre = participantes[i];
+                var nombre = gasto.Participantes[i];
                 var debe = i == 0 ? parte + resto : parte;
-                saldos[nombre] = saldos.GetValueOrDefault(nombre) - debe;
+                corresponde[nombre] = corresponde.GetValueOrDefault(nombre) + debe;
             }
         }
 
-        var acreedores = saldos
-            .Where(s => s.Value > 0m)
-            .OrderByDescending(x => x.Value)
-            .ThenBy(x => x.Key, StringComparer.Ordinal)
-            .ToDictionary(x => x.Key, x => x.Value, StringComparer.Ordinal);
+        return pagado.Keys.Union(corresponde.Keys)
+            .Select(n =>
+            {
+                var p = pagado.GetValueOrDefault(n);
+                var c = corresponde.GetValueOrDefault(n);
+                return new Balance(n, p, c, p - c);
+            })
+            .OrderByDescending(b => b.Saldo)
+            .ToList();
+    }
 
-        var deudores = saldos
-            .Where(s => s.Value < 0m)
-            .OrderByDescending(x => -x.Value)
-            .ThenBy(x => x.Key, StringComparer.Ordinal)
-            .ToDictionary(x => x.Key, x => -x.Value, StringComparer.Ordinal);
+    public static List<Transferencia> Calcular(IEnumerable<Gasto> gastos)
+    {
+        var balances = CalcularBalances(gastos);
+
+        var acreedores = balances.Where(b => b.Saldo > 0).ToDictionary(b => b.Nombre, b => b.Saldo);
+        var deudores = balances.Where(b => b.Saldo < 0).ToDictionary(b => b.Nombre, b => -b.Saldo);
 
         var transferencias = new List<Transferencia>();
 
         while (acreedores.Count > 0 && deudores.Count > 0)
         {
-            var acreedor = acreedores.First();
-            var deudor = deudores.First();
+            var acreedor = acreedores.MaxBy(x => x.Value);
+            var deudor = deudores.MaxBy(x => x.Value);
             var monto = Math.Min(acreedor.Value, deudor.Value);
 
             transferencias.Add(new Transferencia(deudor.Key, acreedor.Key, monto));
 
-            if (acreedor.Value == monto)
-                acreedores.Remove(acreedor.Key);
-            else
-                acreedores[acreedor.Key] = acreedor.Value - monto;
+            if (acreedor.Value == monto) acreedores.Remove(acreedor.Key);
+            else acreedores[acreedor.Key] = acreedor.Value - monto;
 
-            if (deudor.Value == monto)
-                deudores.Remove(deudor.Key);
-            else
-                deudores[deudor.Key] = deudor.Value - monto;
-
-            acreedores = acreedores
-                .OrderByDescending(x => x.Value)
-                .ThenBy(x => x.Key, StringComparer.Ordinal)
-                .ToDictionary(x => x.Key, x => x.Value, StringComparer.Ordinal);
-
-            deudores = deudores
-                .OrderByDescending(x => x.Value)
-                .ThenBy(x => x.Key, StringComparer.Ordinal)
-                .ToDictionary(x => x.Key, x => x.Value, StringComparer.Ordinal);
+            if (deudor.Value == monto) deudores.Remove(deudor.Key);
+            else deudores[deudor.Key] = deudor.Value - monto;
         }
 
         return transferencias;
