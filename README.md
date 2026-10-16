@@ -7,7 +7,9 @@ Dividí gastos con tus amigos y sabé quién le paga a quién, con la menor cant
 ![SQLite](https://img.shields.io/badge/SQLite-EF%20Core-003B57?logo=sqlite&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-![Demo](docs/demo.gif)
+<p align="center">
+  <img src="docs/demo.gif" width="300" alt="Demo de Cuentas Claras" />
+</p>
 
 ## ✨ Funcionalidades
 
@@ -19,12 +21,12 @@ Dividí gastos con tus amigos y sabé quién le paga a quién, con la menor cant
 - **Diseño mobile-first** con tema oscuro.
 
 <p align="center">
-  <img src="docs/01-inicio.png" width="300" alt="Pantalla de inicio" />
-  <img src="docs/02-saldos.png" width="300" alt="Saldos y balance de cada persona" />
+  <img src="docs/01-inicio.png" width="300" align="top" alt="Pantalla de inicio" />
+  <img src="docs/02-saldos.png" width="300" align="top" alt="Saldos y balance de cada persona" />
 </p>
 <p align="center">
-  <img src="docs/03-cargar-gasto.png" width="300" alt="Carga de miembros y gastos" />
-  <img src="docs/04-historial.png" width="300" alt="Historial de gastos" />
+  <img src="docs/03-cargar-gasto.png" width="300" align="top" alt="Carga de miembros y gastos" />
+  <img src="docs/04-historial.png" width="300" align="top" alt="Historial de gastos" />
 </p>
 
 ## 🧠 Cómo funciona la simplificación de deudas
