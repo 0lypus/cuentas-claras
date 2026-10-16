@@ -62,3 +62,9 @@ export const eliminarGasto = (codigo: string, id: number) =>
 
 export const obtenerSaldos = (codigo: string) =>
   request<Transferencia[]>(`/api/grupos/${codigo}/saldos`);
+
+
+export type Balance = { nombre: string; pagado: number; corresponde: number; saldo: number };
+
+export const obtenerBalances = (codigo: string) =>
+  request<Balance[]>(`/api/grupos/${codigo}/balances`);

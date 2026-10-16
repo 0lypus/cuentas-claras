@@ -1,18 +1,29 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import {
   agregarGasto,
   agregarMiembro,
   crearGrupo,
   eliminarGasto,
   listarGastos,
+  obtenerBalances,
   obtenerGrupo,
   obtenerSaldos,
+  type Balance,
   type Gasto,
   type Grupo,
   type Transferencia,
 } from "./api";
 
 const plata = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" });
+
+function Avatar({ nombre }: { nombre: string }) {
+  const hue = [...nombre].reduce((acc, c) => acc + c.charCodeAt(0), 0) % 360;
+  return (
+    <span className="avatar" style={{ background: `hsl(${hue} 45% 40%)` }}>
+      {nombre.charAt(0).toUpperCase()}
+    </span>
+  );
+}
 
 export default function App() {
   const [grupo, setGrupo] = useState<Grupo | null>(null);
@@ -34,25 +45,27 @@ export default function App() {
       .finally(() => setCargando(false));
   }, []);
 
-  async function abrir() {
+  async function abrir(e: FormEvent) {
+    e.preventDefault();
     try {
       setError("");
       const g = await obtenerGrupo(codigo.trim());
       window.location.hash = `/${g.codigoInvitacion}`;
       setGrupo(g);
-    } catch (e) {
-      setError((e as Error).message);
+    } catch (err) {
+      setError((err as Error).message);
     }
   }
 
-  async function crear() {
+  async function crear(e: FormEvent) {
+    e.preventDefault();
     try {
       setError("");
       const g = await crearGrupo(nombre);
       window.location.hash = `/${g.codigoInvitacion}`;
       setGrupo(g);
-    } catch (e) {
-      setError((e as Error).message);
+    } catch (err) {
+      setError((err as Error).message);
     }
   }
 
@@ -61,43 +74,54 @@ export default function App() {
     setGrupo(null);
     setNombre("");
     setCodigo("");
+    setError("");
   }
 
   return (
-    <main style={{ maxWidth: 520, margin: "2rem auto", padding: "0 1rem", fontFamily: "system-ui" }}>
-      <h1>💸 Cuentas Claras</h1>
+    <main className="app">
+      <header className="brand">
+        <div className="logo">💸</div>
+        <h1>Cuentas Claras</h1>
+        {!grupo && (
+          <p className="tagline">
+            Dividí gastos con tus amigos y pagá con la menor cantidad de transferencias.
+          </p>
+        )}
+      </header>
 
       {cargando ? (
-        <p>Cargando...</p>
+        <p className="muted">Cargando...</p>
       ) : grupo ? (
         <GrupoView grupo={grupo} onGrupo={setGrupo} onSalir={salir} />
       ) : (
         <>
-          <h3>Crear un grupo</h3>
-          <input
-            value={nombre}
-            onChange={(e) => setNombre(e.target.value)}
-            placeholder="Nombre (ej: Asado del sábado)"
-            style={{ width: "100%", padding: 8, boxSizing: "border-box" }}
-          />
-          <button onClick={crear} disabled={!nombre.trim()} style={{ marginTop: 8 }}>
-            Crear grupo
-          </button>
+          <form className="card stack" onSubmit={crear}>
+            <h3>Crear un grupo</h3>
+            <input
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              placeholder="Nombre (ej: Asado del sábado)"
+            />
+            <button className="btn btn-primary" disabled={!nombre.trim()}>
+              Crear grupo
+            </button>
+          </form>
 
-          <h3 style={{ marginTop: 32 }}>¿Ya tenés un código?</h3>
-          <input
-            value={codigo}
-            onChange={(e) => setCodigo(e.target.value)}
-            placeholder="Código de invitación"
-            style={{ width: "100%", padding: 8, boxSizing: "border-box" }}
-          />
-          <button onClick={abrir} disabled={!codigo.trim()} style={{ marginTop: 8 }}>
-            Entrar al grupo
-          </button>
+          <form className="card stack" onSubmit={abrir}>
+            <h3>¿Ya tenés un código?</h3>
+            <input
+              value={codigo}
+              onChange={(e) => setCodigo(e.target.value)}
+              placeholder="Código de invitación"
+            />
+            <button className="btn" disabled={!codigo.trim()}>
+              Entrar al grupo
+            </button>
+          </form>
         </>
       )}
 
-      {error && <p style={{ color: "crimson" }}>{error}</p>}
+      {error && <p className="error">{error}</p>}
     </main>
   );
 }
@@ -117,6 +141,7 @@ function GrupoView({
   const [pagadoPorId, setPagadoPorId] = useState("");
   const [excluidos, setExcluidos] = useState<number[]>([]);
   const [saldos, setSaldos] = useState<Transferencia[]>([]);
+  const [balances, setBalances] = useState<Balance[]>([]);
   const [gastos, setGastos] = useState<Gasto[]>([]);
   const [error, setError] = useState("");
   const [copiado, setCopiado] = useState(false);
@@ -124,34 +149,38 @@ function GrupoView({
   const codigo = grupo.codigoInvitacion;
   const pagador = pagadoPorId || String(grupo.miembros[0]?.id ?? "");
   const participantesIds = grupo.miembros.filter((m) => !excluidos.includes(m.id)).map((m) => m.id);
-
-  useEffect(() => {
-    Promise.all([obtenerSaldos(codigo), listarGastos(codigo)])
-      .then(([s, g]) => {
-        setSaldos(s);
-        setGastos(g);
-      })
-      .catch((e) => setError(e.message));
-  }, [codigo]);
+  const totalGastado = gastos.reduce((acc, g) => acc + g.monto, 0);
 
   async function refrescar() {
-    const [s, g] = await Promise.all([obtenerSaldos(codigo), listarGastos(codigo)]);
+    const [s, g, b] = await Promise.all([
+      obtenerSaldos(codigo),
+      listarGastos(codigo),
+      obtenerBalances(codigo),
+    ]);
     setSaldos(s);
     setGastos(g);
+    setBalances(b);
   }
 
-  async function onAgregarMiembro() {
+  useEffect(() => {
+    refrescar().catch((e) => setError(e.message));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [codigo]);
+
+  async function onAgregarMiembro(e: FormEvent) {
+    e.preventDefault();
     try {
       setError("");
       const m = await agregarMiembro(codigo, nuevo);
       onGrupo({ ...grupo, miembros: [...grupo.miembros, m] });
       setNuevo("");
-    } catch (e) {
-      setError((e as Error).message);
+    } catch (err) {
+      setError((err as Error).message);
     }
   }
 
-  async function onAgregarGasto() {
+  async function onAgregarGasto(e: FormEvent) {
+    e.preventDefault();
     try {
       setError("");
       await agregarGasto(codigo, {
@@ -163,8 +192,8 @@ function GrupoView({
       setDescripcion("");
       setMonto("");
       await refrescar();
-    } catch (e) {
-      setError((e as Error).message);
+    } catch (err) {
+      setError((err as Error).message);
     }
   }
 
@@ -174,8 +203,8 @@ function GrupoView({
       setError("");
       await eliminarGasto(codigo, g.id);
       await refrescar();
-    } catch (e) {
-      setError((e as Error).message);
+    } catch (err) {
+      setError((err as Error).message);
     }
   }
 
@@ -191,113 +220,176 @@ function GrupoView({
 
   return (
     <>
-      <h2>{grupo.nombre}</h2>
-      <p>
-        Código: <code>{codigo}</code>{" "}
-        <button onClick={copiarLink}>{copiado ? "¡Copiado!" : "Copiar link de invitación"}</button>{" "}
-        <button onClick={onSalir}>Salir</button>
-      </p>
+      <section className="card">
+        <h2>{grupo.nombre}</h2>
+        <div className="row">
+          <span className="muted">Código</span>
+          <span className="code">{codigo}</span>
+          <span className="grow" />
+          <button className="btn btn-small" onClick={copiarLink}>
+            {copiado ? "¡Copiado!" : "🔗 Copiar link"}
+          </button>
+          <button className="btn btn-small" onClick={onSalir}>
+            Salir
+          </button>
+        </div>
+      </section>
 
-      <h3>Miembros</h3>
-      <p>{grupo.miembros.length ? grupo.miembros.map((m) => m.nombre).join(", ") : "Todavía no hay nadie."}</p>
-      <input
-        value={nuevo}
-        onChange={(e) => setNuevo(e.target.value)}
-        placeholder="Nombre del nuevo miembro"
-        style={{ padding: 8 }}
-      />{" "}
-      <button onClick={onAgregarMiembro} disabled={!nuevo.trim()}>
-        Agregar
-      </button>
+      <section className="card">
+        <h3>Quién le paga a quién</h3>
+        {saldos.length === 0 ? (
+          <p className="empty">Sin deudas pendientes 🎉</p>
+        ) : (
+          saldos.map((t, i) => (
+            <div className="debt" key={i}>
+              <Avatar nombre={t.de} />
+              <span className="who">
+                <strong>{t.de}</strong> <span className="muted">le paga a</span> <strong>{t.a}</strong>
+              </span>
+              <span className="amount">{plata.format(t.monto)}</span>
+            </div>
+          ))
+        )}
+      </section>
+
+      <section className="card">
+        <h3>Balance de cada uno</h3>
+        {balances.length === 0 ? (
+          <p className="empty">Todavía no hay movimientos.</p>
+        ) : (
+          <div>
+            {balances.map((b) => (
+              <div className="balance" key={b.nombre}>
+                <Avatar nombre={b.nombre} />
+                <div className="who">
+                  <strong>{b.nombre}</strong>
+                  <div className="muted">
+                    Pagó {plata.format(b.pagado)} · le tocaba {plata.format(b.corresponde)}
+                  </div>
+                </div>
+                <span className={`amount ${b.saldo > 0 ? "pos" : b.saldo < 0 ? "neg" : ""}`}>
+                  {b.saldo > 0 ? "+" : ""}
+                  {plata.format(b.saldo)}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+        <p className="muted" style={{ marginTop: "0.75rem" }}>
+          Lo que alguien puso de más se le compensa con lo que debe, por eso las transferencias
+          pueden ser menos que los gastos cargados.
+        </p>
+      </section>
+
+      <section className="card">
+        <h3>Miembros</h3>
+        {grupo.miembros.length > 0 && (
+          <div className="chips" style={{ marginBottom: "0.75rem" }}>
+            {grupo.miembros.map((m) => (
+              <span className="chip" key={m.id}>
+                <Avatar nombre={m.nombre} />
+                {m.nombre}
+              </span>
+            ))}
+          </div>
+        )}
+        <form className="row" onSubmit={onAgregarMiembro}>
+          <input
+            className="grow"
+            value={nuevo}
+            onChange={(e) => setNuevo(e.target.value)}
+            placeholder="Nombre del nuevo miembro"
+          />
+          <button className="btn btn-primary" disabled={!nuevo.trim()}>
+            Agregar
+          </button>
+        </form>
+      </section>
 
       {grupo.miembros.length > 0 && (
-        <>
+        <form className="card stack" onSubmit={onAgregarGasto}>
           <h3>Cargar un gasto</h3>
-          <div style={{ display: "grid", gap: 8 }}>
-            <input
-              value={descripcion}
-              onChange={(e) => setDescripcion(e.target.value)}
-              placeholder="¿En qué se gastó? (ej: Carne)"
-              style={{ padding: 8 }}
-            />
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={monto}
-              onChange={(e) => setMonto(e.target.value)}
-              placeholder="Monto"
-              style={{ padding: 8 }}
-            />
-            <label>
-              Pagó:{" "}
-              <select value={pagador} onChange={(e) => setPagadoPorId(e.target.value)}>
-                {grupo.miembros.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.nombre}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div>
-              Se reparte entre:
+          <input
+            value={descripcion}
+            onChange={(e) => setDescripcion(e.target.value)}
+            placeholder="¿En qué se gastó? (ej: Carne)"
+          />
+          <input
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="0.01"
+            value={monto}
+            onChange={(e) => setMonto(e.target.value)}
+            placeholder="Monto"
+          />
+          <div>
+            <label className="field-label">Pagó</label>
+            <select value={pagador} onChange={(e) => setPagadoPorId(e.target.value)}>
               {grupo.miembros.map((m) => (
-                <label key={m.id} style={{ marginLeft: 12 }}>
-                  <input
-                    type="checkbox"
-                    checked={!excluidos.includes(m.id)}
-                    onChange={() => toggleParticipante(m.id)}
-                  />{" "}
+                <option key={m.id} value={m.id}>
                   {m.nombre}
-                </label>
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="field-label">Se reparte entre</label>
+            <div className="chips">
+              {grupo.miembros.map((m) => (
+                <button
+                  type="button"
+                  key={m.id}
+                  className={`chip ${excluidos.includes(m.id) ? "" : "on"}`}
+                  aria-pressed={!excluidos.includes(m.id)}
+                  onClick={() => toggleParticipante(m.id)}
+                >
+                  <Avatar nombre={m.nombre} />
+                  {m.nombre}
+                </button>
               ))}
             </div>
-            <button
-              onClick={onAgregarGasto}
-              disabled={!descripcion.trim() || !(Number(monto) > 0) || participantesIds.length === 0}
-            >
-              Agregar gasto
-            </button>
           </div>
-        </>
+          <button
+            className="btn btn-primary"
+            disabled={!descripcion.trim() || !(Number(monto) > 0) || participantesIds.length === 0}
+          >
+            Agregar gasto
+          </button>
+        </form>
       )}
 
-      <h3>Quién le paga a quién</h3>
-      {saldos.length === 0 ? (
-        <p>Sin deudas pendientes 🎉</p>
-      ) : (
-        <ul>
-          {saldos.map((t, i) => (
-            <li key={i}>
-              <strong>{t.de}</strong> le paga a <strong>{t.a}</strong> {plata.format(t.monto)}
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <h3>Historial de gastos</h3>
-      {gastos.length === 0 ? (
-        <p>Todavía no se cargó ningún gasto.</p>
-      ) : (
-        <ul style={{ paddingLeft: 0, listStyle: "none" }}>
-          {gastos.map((g) => (
-            <li key={g.id} style={{ padding: "8px 0", borderBottom: "1px solid #ddd" }}>
+      <section className="card">
+        <h3>Historial de gastos</h3>
+        {gastos.length > 0 && (
+          <p className="total">
+            Total gastado: <strong>{plata.format(totalGastado)}</strong>
+          </p>
+        )}
+        {gastos.length === 0 ? (
+          <p className="empty">Todavía no se cargó ningún gasto.</p>
+        ) : (
+          gastos.map((g) => (
+            <div className="expense" key={g.id}>
               <div>
-                <strong>{g.descripcion}</strong> · {plata.format(g.monto)}{" "}
-                <button onClick={() => onEliminarGasto(g)} title="Borrar gasto">
+                <strong>{g.descripcion}</strong>
+                <div className="muted">
+                  Pagó {g.pagadoPor} · entre {g.participantes.join(", ")} ·{" "}
+                  {new Date(g.fecha).toLocaleDateString("es-AR")}
+                </div>
+              </div>
+              <div className="row" style={{ flexWrap: "nowrap" }}>
+                <span className="amount">{plata.format(g.monto)}</span>
+                <button className="btn-icon" onClick={() => onEliminarGasto(g)} title="Borrar gasto">
                   🗑
                 </button>
               </div>
-              <small>
-                Pagó {g.pagadoPor} · entre {g.participantes.join(", ")} ·{" "}
-                {new Date(g.fecha).toLocaleDateString("es-AR")}
-              </small>
-            </li>
-          ))}
-        </ul>
-      )}
+            </div>
+          ))
+        )}
+      </section>
 
-      {error && <p style={{ color: "crimson" }}>{error}</p>}
+      {error && <p className="error">{error}</p>}
     </>
   );
 }
