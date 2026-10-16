@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="CuentasClaras.Api/CuentasClaras.Api.csproj" />
+  <Project Path="CuentasClaras.Core/CuentasClaras.Core.csproj" />
+  <Project Path="CuentasClaras.Infra/CuentasClaras.Infra.csproj" />
+  <Project Path="CuentasClaras.Tests/CuentasClaras.Tests.csproj" />
+</Solution>
