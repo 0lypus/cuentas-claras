@@ -1,0 +1,22 @@
+@host = http://localhost:5140
+
+### 1. Crear grupo 
+POST {{host}}/api/grupos
+Content-Type: application/json
+
+{ "nombre": "Asado del sábado" }
+
+### 2. Agregar miembros 
+POST {{host}}/api/grupos/CODIGO/miembros
+Content-Type: application/json
+
+{ "nombre": "Ana" }
+
+### 3. Cargar un gasto 
+POST {{host}}/api/grupos/CODIGO/gastos
+Content-Type: application/json
+
+{ "descripcion": "Carne", "monto": 30000, "pagadoPorId": 1, "participantesIds": [1, 2, 3] }
+
+### 4. Ver quién le paga a quién
+GET {{host}}/api/grupos/CODIGO/saldos
