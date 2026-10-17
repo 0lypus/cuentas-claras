@@ -11,6 +11,10 @@ Dividí gastos con tus amigos y sabé quién le paga a quién, con la menor cant
   <img src="docs/demo.gif" width="300" alt="Demo de Cuentas Claras" />
 </p>
 
+🔗 **[Probalo online](https://cuentas-claras-alpha-rosy.vercel.app/#/demo)**
+
+> La demo corre en planes gratuitos: el servidor se duerme por inactividad, así que la primera carga puede tardar hasta un minuto, y los datos pueden reiniciarse.
+
 ## ✨ Funcionalidades
 
 - **Grupos con link de invitación**: sin registro, cualquiera con el link entra al grupo.
@@ -121,7 +125,7 @@ dotnet test
 - [ ] Resumen listo para compartir por WhatsApp
 - [ ] Instalable como PWA
 - [ ] Gráficos de gastos
-- [ ] Demo online
+- [x] Demo online
 
 ## 📄 Licencia
 
