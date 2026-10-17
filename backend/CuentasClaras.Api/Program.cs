@@ -1,41 +1,61 @@
+using CuentasClaras.Core.Entities;
 using CuentasClaras.Infra;
 using Microsoft.EntityFrameworkCore;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
 builder.Services.AddDbContext<CuentasClarasDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("Default")));
+    options.UseSqlite(builder.Configuration.GetConnectionString("Default") ?? "Data Source=cuentasclaras.db"));
 
+// Orígenes permitidos: configurables con la variable Cors__Origins (separados por coma)
+var origins = (builder.Configuration["Cors:Origins"] ?? "http://localhost:5173")
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
 builder.Services.AddCors(o => o.AddPolicy("front", p =>
-    p.WithOrigins("http://localhost:5173").AllowAnyHeader().AllowAnyMethod()));
-
-
+    p.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
-    scope.ServiceProvider.GetRequiredService<CuentasClarasDbContext>().Database.Migrate();
+    var db = scope.ServiceProvider.GetRequiredService<CuentasClarasDbContext>();
+    db.Database.Migrate();
+
+    // Si la base está vacía, carga un grupo de ejemplo (código: demo)
+    if (!db.Grupos.Any())
+    {
+        var agustin = new Miembro { Nombre = "Agustín" };
+        var esteban = new Miembro { Nombre = "Esteban" };
+        var charly = new Miembro { Nombre = "Charly" };
+        var todos = new List<Miembro> { agustin, esteban, charly };
+
+        var grupo = new Grupo
+        {
+            Nombre = "Asado del sábado",
+            CodigoInvitacion = "demo",
+            Miembros = todos
+        };
+
+        grupo.Gastos.Add(new GastoRegistrado { Descripcion = "Carne", Monto = 42000m, PagadoPor = agustin, Participantes = todos.ToList() });
+        grupo.Gastos.Add(new GastoRegistrado { Descripcion = "Bebidas", Monto = 18000m, PagadoPor = esteban, Participantes = todos.ToList() });
+        grupo.Gastos.Add(new GastoRegistrado { Descripcion = "Hielo y carbón", Monto = 6000m, PagadoPor = charly, Participantes = todos.ToList() });
+
+        db.Grupos.Add(grupo);
+        db.SaveChanges();
+    }
 }
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
-
-app.UseAuthorization();
-
-app.MapControllers();
-
 app.UseCors("front");
+
+app.MapGet("/", () => "Cuentas Claras API");
+app.MapControllers();
 
 app.Run();
