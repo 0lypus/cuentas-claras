@@ -1,4 +1,4 @@
-const API = import.meta.env.VITE_API_URL ?? "http://localhost:5140";
+const API = (import.meta.env.VITE_API_URL ?? "http://localhost:5140").replace(/\/+$/, "");
 
 export type Miembro = { id: number; nombre: string };
 export type Grupo = {
