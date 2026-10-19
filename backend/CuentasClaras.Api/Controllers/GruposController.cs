@@ -66,18 +66,26 @@ public class GruposController(CuentasClarasDbContext db) : ControllerBase
             .FirstOrDefaultAsync(g => g.CodigoInvitacion == codigo);
         if (grupo is null) return NotFound();
 
-        return await db.Gastos
+        var gastos = await db.Gastos
             .AsNoTracking()
+            .AsSplitQuery()
+            .Include(g => g.PagadoPor)
+            .Include(g => g.Participantes)
+            .Include(g => g.Reparto).ThenInclude(d => d.Miembro)
             .Where(g => g.GrupoId == grupo.Id)
             .OrderByDescending(g => g.Id)
+            .ToListAsync();
+
+        return gastos
             .Select(g => new GastoListadoDto(
                 g.Id,
                 g.Descripcion,
                 g.Monto,
                 g.PagadoPor.Nombre,
                 g.Participantes.Select(p => p.Nombre).ToList(),
-                g.Fecha))
-            .ToListAsync();
+                g.Fecha,
+                g.Reparto.Select(d => new RepartoDetalleDto(d.Miembro.Nombre, d.Monto)).ToList()))
+            .ToList();
     }
 
     [HttpDelete("{codigo}/gastos/{id:int}")]
@@ -99,10 +107,16 @@ public class GruposController(CuentasClarasDbContext db) : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(req.Descripcion))
             return BadRequest("La descripción es obligatoria.");
-        if (req.Monto <= 0)
+
+        var monto = Math.Round(req.Monto, 2);
+        if (monto <= 0)
             return BadRequest("El monto debe ser mayor a 0.");
         if (req.ParticipantesIds is null || req.ParticipantesIds.Count == 0)
             return BadRequest("Tiene que haber al menos un participante.");
+
+        var modo = (req.ModoReparto ?? "igual").Trim().ToLowerInvariant();
+        if (modo is not ("igual" or "porcentaje" or "montos"))
+            return BadRequest("El modo de reparto tiene que ser \"igual\", \"porcentaje\" o \"montos\".");
 
         var grupo = await db.Grupos
             .Include(g => g.Miembros)
@@ -118,13 +132,45 @@ public class GruposController(CuentasClarasDbContext db) : ControllerBase
         if (participantes.Count != ids.Count)
             return BadRequest("Hay participantes que no pertenecen al grupo.");
 
+        List<decimal>? montos = null;
+        if (modo != "igual")
+        {
+            var valores = req.Reparto ?? [];
+            var idsReparto = valores.Select(v => v.MiembroId).Distinct().ToList();
+            if (idsReparto.Count != valores.Count || idsReparto.Count != participantes.Count || !idsReparto.All(ids.Contains))
+                return BadRequest("El reparto tiene que incluir un valor por cada participante.");
+
+            // Se respeta el orden de los participantes del grupo para que el resultado sea estable
+            var porParticipante = participantes
+                .Select(p => valores.First(v => v.MiembroId == p.Id).Valor)
+                .ToList();
+
+            try
+            {
+                montos = modo == "porcentaje"
+                    ? RepartoDeGastos.PorPorcentaje(monto, porParticipante)
+                    : RepartoDeGastos.MontosFijos(monto, porParticipante);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
         var gasto = new GastoRegistrado
         {
             Descripcion = req.Descripcion.Trim(),
-            Monto = Math.Round(req.Monto, 2),
+            Monto = monto,
             PagadoPor = pagador,
             Participantes = participantes
         };
+
+        if (montos is not null)
+        {
+            for (var i = 0; i < participantes.Count; i++)
+                gasto.Reparto.Add(new DetalleReparto { Miembro = participantes[i], Monto = montos[i] });
+        }
+
         grupo.Gastos.Add(gasto);
         await db.SaveChangesAsync();
 
@@ -139,15 +185,11 @@ public class GruposController(CuentasClarasDbContext db) : ControllerBase
             .AsSplitQuery()
             .Include(g => g.Gastos).ThenInclude(x => x.PagadoPor)
             .Include(g => g.Gastos).ThenInclude(x => x.Participantes)
+            .Include(g => g.Gastos).ThenInclude(x => x.Reparto).ThenInclude(d => d.Miembro)
             .FirstOrDefaultAsync(g => g.CodigoInvitacion == codigo);
         if (grupo is null) return NotFound();
 
-        var gastos = grupo.Gastos.Select(x => new Gasto(
-            x.PagadoPor.Nombre,
-            x.Monto,
-            x.Participantes.Select(p => p.Nombre).ToList()));
-
-        return SimplificadorDeDeudas.Calcular(gastos);
+        return SimplificadorDeDeudas.Calcular(grupo.Gastos.Select(ADominio));
     }
 
 
@@ -160,16 +202,22 @@ public class GruposController(CuentasClarasDbContext db) : ControllerBase
             .Include(g => g.Miembros)
             .Include(g => g.Gastos).ThenInclude(x => x.PagadoPor)
             .Include(g => g.Gastos).ThenInclude(x => x.Participantes)
+            .Include(g => g.Gastos).ThenInclude(x => x.Reparto).ThenInclude(d => d.Miembro)
             .FirstOrDefaultAsync(g => g.CodigoInvitacion == codigo);
         if (grupo is null) return NotFound();
 
-        var gastos = grupo.Gastos.Select(x => new Gasto(
-            x.PagadoPor.Nombre,
-            x.Monto,
-            x.Participantes.Select(p => p.Nombre).ToList()));
-
-        return SimplificadorDeDeudas.CalcularBalances(gastos, grupo.Miembros.Select(m => m.Nombre));
+        return SimplificadorDeDeudas.CalcularBalances(
+            grupo.Gastos.Select(ADominio),
+            grupo.Miembros.Select(m => m.Nombre));
     }
+
+    private static Gasto ADominio(GastoRegistrado g) => new(
+        g.PagadoPor.Nombre,
+        g.Monto,
+        g.Participantes.Select(p => p.Nombre).ToList(),
+        g.Reparto.Count == 0
+            ? null
+            : g.Reparto.ToDictionary(d => d.Miembro.Nombre, d => d.Monto));
 
     private static GrupoDto ToDto(Grupo g) => new(
         g.Id,

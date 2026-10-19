@@ -12,5 +12,6 @@ public class GastoRegistrado
     public Miembro PagadoPor { get; set; } = null!;
 
     public List<Miembro> Participantes { get; set; } = [];
+    public List<DetalleReparto> Reparto { get; set; } = [];
     public Grupo Grupo { get; set; } = null!;
 }

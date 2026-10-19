@@ -17,6 +17,32 @@ namespace CuentasClaras.Infra.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.13");
 
+            modelBuilder.Entity("CuentasClaras.Core.Entities.DetalleReparto", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("GastoId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MiembroId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("Monto")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MiembroId");
+
+                    b.HasIndex("GastoId", "MiembroId")
+                        .IsUnique();
+
+                    b.ToTable("DetalleReparto");
+                });
+
             modelBuilder.Entity("CuentasClaras.Core.Entities.GastoRegistrado", b =>
                 {
                     b.Property<int>("Id")
@@ -112,6 +138,25 @@ namespace CuentasClaras.Infra.Migrations
                     b.ToTable("GastoRegistradoMiembro");
                 });
 
+            modelBuilder.Entity("CuentasClaras.Core.Entities.DetalleReparto", b =>
+                {
+                    b.HasOne("CuentasClaras.Core.Entities.GastoRegistrado", "Gasto")
+                        .WithMany("Reparto")
+                        .HasForeignKey("GastoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CuentasClaras.Core.Entities.Miembro", "Miembro")
+                        .WithMany()
+                        .HasForeignKey("MiembroId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Gasto");
+
+                    b.Navigation("Miembro");
+                });
+
             modelBuilder.Entity("CuentasClaras.Core.Entities.GastoRegistrado", b =>
                 {
                     b.HasOne("CuentasClaras.Core.Entities.Grupo", "Grupo")
@@ -155,6 +200,11 @@ namespace CuentasClaras.Infra.Migrations
                         .HasForeignKey("ParticipantesId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("CuentasClaras.Core.Entities.GastoRegistrado", b =>
+                {
+                    b.Navigation("Reparto");
                 });
 
             modelBuilder.Entity("CuentasClaras.Core.Entities.Grupo", b =>

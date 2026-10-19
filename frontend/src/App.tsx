@@ -11,6 +11,7 @@ import {
   type Balance,
   type Gasto,
   type Grupo,
+  type ModoReparto,
   type Transferencia,
 } from "./api";
 
@@ -140,6 +141,8 @@ function GrupoView({
   const [monto, setMonto] = useState("");
   const [pagadoPorId, setPagadoPorId] = useState("");
   const [excluidos, setExcluidos] = useState<number[]>([]);
+  const [modo, setModo] = useState<ModoReparto>("igual");
+  const [valores, setValores] = useState<Record<number, string>>({});
   const [saldos, setSaldos] = useState<Transferencia[]>([]);
   const [balances, setBalances] = useState<Balance[]>([]);
   const [gastos, setGastos] = useState<Gasto[]>([]);
@@ -148,8 +151,15 @@ function GrupoView({
 
   const codigo = grupo.codigoInvitacion;
   const pagador = pagadoPorId || String(grupo.miembros[0]?.id ?? "");
-  const participantesIds = grupo.miembros.filter((m) => !excluidos.includes(m.id)).map((m) => m.id);
+  const participantes = grupo.miembros.filter((m) => !excluidos.includes(m.id));
+  const participantesIds = participantes.map((m) => m.id);
   const totalGastado = gastos.reduce((acc, g) => acc + g.monto, 0);
+
+  const montoNum = Number(monto) || 0;
+  const sumaReparto = participantes.reduce((acc, m) => acc + (Number(valores[m.id]) || 0), 0);
+  const repartoValido =
+    modo === "igual" ||
+    Math.round(sumaReparto * 100) === Math.round((modo === "porcentaje" ? 100 : montoNum) * 100);
 
   async function refrescar() {
     const [s, g, b] = await Promise.all([
@@ -181,16 +191,27 @@ function GrupoView({
 
   async function onAgregarGasto(e: FormEvent) {
     e.preventDefault();
+    if (!repartoValido) return;
     try {
       setError("");
       await agregarGasto(codigo, {
         descripcion,
-        monto: Number(monto),
+        monto: montoNum,
         pagadoPorId: Number(pagador),
         participantesIds,
+        modoReparto: modo,
+        reparto:
+          modo === "igual"
+            ? undefined
+            : participantesIds.map((id) => ({
+                miembroId: id,
+                valor: Math.round((Number(valores[id]) || 0) * 100) / 100,
+              })),
       });
       setDescripcion("");
       setMonto("");
+      setModo("igual");
+      setValores({});
       await refrescar();
     } catch (err) {
       setError((err as Error).message);
@@ -210,6 +231,24 @@ function GrupoView({
 
   function toggleParticipante(id: number) {
     setExcluidos((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
+
+  function cambiarModo(nuevoModo: ModoReparto) {
+    setModo(nuevoModo);
+    if (nuevoModo === "igual") return;
+
+    const total = nuevoModo === "porcentaje" ? 100 : montoNum;
+    if (participantes.length === 0 || total <= 0) return;
+
+    // Prellena con un reparto parejo para que solo haya que ajustar diferencias
+    const base = Math.floor((total * 100) / participantes.length) / 100;
+    const prellenado: Record<number, string> = {};
+    participantes.forEach((m, i) => {
+      const valor =
+        i === 0 ? Math.round((total - base * (participantes.length - 1)) * 100) / 100 : base;
+      prellenado[m.id] = String(valor);
+    });
+    setValores(prellenado);
   }
 
   async function copiarLink() {
@@ -350,9 +389,73 @@ function GrupoView({
               ))}
             </div>
           </div>
+
+          <div>
+            <label className="field-label">Cómo se reparte</label>
+            <div className="segmented" role="group" aria-label="Cómo se reparte">
+              {(
+                [
+                  ["igual", "Partes iguales"],
+                  ["porcentaje", "Porcentaje"],
+                  ["montos", "Montos"],
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  type="button"
+                  key={id}
+                  className={modo === id ? "on" : ""}
+                  aria-pressed={modo === id}
+                  onClick={() => cambiarModo(id)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {modo !== "igual" && (
+            <div>
+              <label className="field-label">
+                {modo === "porcentaje" ? "Porcentaje de cada uno" : "Monto de cada uno"}
+              </label>
+              <div className="reparto">
+                {participantes.map((m) => (
+                  <div className="reparto-row" key={m.id}>
+                    <span className="who">
+                      <Avatar nombre={m.nombre} />
+                      {m.nombre}
+                    </span>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      step="0.01"
+                      value={valores[m.id] ?? ""}
+                      onChange={(e) => setValores((v) => ({ ...v, [m.id]: e.target.value }))}
+                      placeholder={modo === "porcentaje" ? "%" : "$"}
+                      aria-label={`${modo === "porcentaje" ? "Porcentaje" : "Monto"} de ${m.nombre}`}
+                    />
+                    {modo === "porcentaje" && <span className="suffix">%</span>}
+                  </div>
+                ))}
+              </div>
+              {participantes.length === 0 ? (
+                <p className="hint">Elegí al menos un participante.</p>
+              ) : (
+                <p className={`hint ${repartoValido ? "" : "bad"}`}>
+                  {modo === "porcentaje"
+                    ? `Suma ${sumaReparto.toLocaleString("es-AR", { maximumFractionDigits: 2 })}% de 100%`
+                    : `Suma ${plata.format(sumaReparto)} de ${plata.format(montoNum)}`}
+                </p>
+              )}
+            </div>
+          )}
+
           <button
             className="btn btn-primary"
-            disabled={!descripcion.trim() || !(Number(monto) > 0) || participantesIds.length === 0}
+            disabled={
+              !descripcion.trim() || !(montoNum > 0) || participantesIds.length === 0 || !repartoValido
+            }
           >
             Agregar gasto
           </button>
@@ -374,8 +477,14 @@ function GrupoView({
               <div>
                 <strong>{g.descripcion}</strong>
                 <div className="muted">
-                  Pagó {g.pagadoPor} · entre {g.participantes.join(", ")} ·{" "}
-                  {new Date(g.fecha).toLocaleDateString("es-AR")}
+                  Pagó {g.pagadoPor} · {new Date(g.fecha).toLocaleDateString("es-AR")}
+                </div>
+                <div className="muted">
+                  {g.reparto.length > 0
+                    ? `Reparto: ${g.reparto
+                        .map((r) => `${r.nombre} ${plata.format(r.monto)}`)
+                        .join(" · ")}`
+                    : `Entre ${g.participantes.join(", ")}`}
                 </div>
               </div>
               <div className="row" style={{ flexWrap: "nowrap" }}>

@@ -345,3 +345,78 @@ button.chip.on {
 .amount.neg {
   color: var(--danger);
 }
+
+/* Reparto del gasto */
+.segmented {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  background: var(--card-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.segmented button {
+  flex: 1;
+  padding: 0.5rem 0.4rem;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--muted);
+  background: transparent;
+  border: none;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.segmented button.on {
+  color: var(--primary-ink);
+  background: var(--primary);
+}
+
+.reparto {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.reparto-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.reparto-row .who {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reparto-row input {
+  flex: none;
+  width: 7.5rem;
+  padding: 0.5rem 0.7rem;
+  text-align: right;
+}
+
+.reparto-row .suffix {
+  width: 0.9rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.hint.bad {
+  color: var(--danger);
+}

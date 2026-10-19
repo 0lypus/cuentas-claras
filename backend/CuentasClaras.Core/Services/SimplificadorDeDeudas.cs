@@ -21,17 +21,27 @@ public static class SimplificadorDeDeudas
             if (gasto.Participantes.Count == 0)
                 throw new ArgumentException("Un gasto necesita al menos un participante.");
 
-            // Parte por persona truncada a centavos; el resto va al primer participante
-            var parte = Math.Round(gasto.Monto / gasto.Participantes.Count, 2, MidpointRounding.ToZero);
-            var resto = gasto.Monto - parte * gasto.Participantes.Count;
-
             pagado[gasto.PagadoPor] = pagado.GetValueOrDefault(gasto.PagadoPor) + gasto.Monto;
 
+            if (gasto.Reparto is not null)
+            {
+                // Reparto a medida (porcentaje o montos fijos): cada participante tiene su monto.
+                // Se validó al guardar que sumen el monto del gasto, si no los balances no cerrarían.
+                if (gasto.Reparto.Values.Sum() != gasto.Monto)
+                    throw new ArgumentException("El reparto del gasto no coincide con su monto.");
+
+                foreach (var nombre in gasto.Participantes)
+                    corresponde[nombre] = corresponde.GetValueOrDefault(nombre) + gasto.Reparto.GetValueOrDefault(nombre);
+
+                continue;
+            }
+
+            // Parte por persona truncada a centavos; el resto va al primer participante
+            var partes = RepartoDeGastos.EnPartesIguales(gasto.Monto, gasto.Participantes.Count);
             for (var i = 0; i < gasto.Participantes.Count; i++)
             {
                 var nombre = gasto.Participantes[i];
-                var debe = i == 0 ? parte + resto : parte;
-                corresponde[nombre] = corresponde.GetValueOrDefault(nombre) + debe;
+                corresponde[nombre] = corresponde.GetValueOrDefault(nombre) + partes[i];
             }
         }
 

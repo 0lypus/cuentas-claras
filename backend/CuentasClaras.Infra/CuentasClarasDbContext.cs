@@ -36,5 +36,17 @@ public class CuentasClarasDbContext(DbContextOptions<CuentasClarasDbContext> opt
 
             g.HasMany(x => x.Participantes).WithMany();
         });
+
+        modelBuilder.Entity<DetalleReparto>(d =>
+        {
+            d.Property(x => x.Monto).HasPrecision(18, 2);
+            d.HasIndex(x => new { x.GastoId, x.MiembroId }).IsUnique();
+
+            // Borrar el gasto se lleva su reparto puesto; los miembros no se borran desde la API
+            d.HasOne(x => x.Gasto).WithMany(g => g.Reparto).HasForeignKey(x => x.GastoId)
+             .OnDelete(DeleteBehavior.Cascade);
+            d.HasOne(x => x.Miembro).WithMany().HasForeignKey(x => x.MiembroId)
+             .OnDelete(DeleteBehavior.Restrict);
+        });
     }
 }

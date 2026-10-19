@@ -8,18 +8,27 @@ export type Grupo = {
   miembros: Miembro[];
 };
 export type Transferencia = { de: string; a: string; monto: number };
+
+export type ModoReparto = "igual" | "porcentaje" | "montos";
+
 export type NuevoGasto = {
   descripcion: string;
   monto: number;
   pagadoPorId: number;
   participantesIds: number[];
+  modoReparto?: ModoReparto;
+  reparto?: { miembroId: number; valor: number }[];
 };
+
+export type DetalleReparto = { nombre: string; monto: number };
+
 export type Gasto = {
   id: number;
   descripcion: string;
   monto: number;
   pagadoPor: string;
   participantes: string[];
+  reparto: DetalleReparto[];
   fecha: string;
 };
 

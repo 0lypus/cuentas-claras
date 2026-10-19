@@ -52,4 +52,48 @@ public class SimplificadorDeDeudasTests
 
         Assert.Equal(66.66m, resultado.Sum(t => t.Monto));
     }
+
+    [Fact]
+    public void RepartoAMedida_UsaLoQueLeTocaACadaUno()
+    {
+        var gastos = new[]
+        {
+            new Gasto("Ana", 1000m, ["Ana", "Beto", "Caro"],
+                new Dictionary<string, decimal> { ["Ana"] = 500m, ["Beto"] = 300m, ["Caro"] = 200m }),
+        };
+
+        var resultado = SimplificadorDeDeudas.Calcular(gastos);
+
+        Assert.Equal(2, resultado.Count);
+        Assert.Contains(new Transferencia("Beto", "Ana", 300m), resultado);
+        Assert.Contains(new Transferencia("Caro", "Ana", 200m), resultado);
+    }
+
+    [Fact]
+    public void RepartoAMedida_LosBalancesSumanCero()
+    {
+        var gastos = new[]
+        {
+            new Gasto("Beto", 900m, ["Ana", "Beto", "Caro"],
+                new Dictionary<string, decimal> { ["Ana"] = 150m, ["Beto"] = 450m, ["Caro"] = 300m }),
+        };
+
+        var balances = SimplificadorDeDeudas.CalcularBalances(gastos);
+
+        Assert.Equal(0m, balances.Sum(b => b.Saldo));
+        Assert.Equal(150m, balances.Single(b => b.Nombre == "Ana").Corresponde);
+        Assert.Equal(450m, balances.Single(b => b.Nombre == "Beto").Corresponde);
+    }
+
+    [Fact]
+    public void RepartoQueNoCoincideConElMonto_EsInvalido()
+    {
+        var gastos = new[]
+        {
+            new Gasto("Ana", 1000m, ["Ana", "Beto"],
+                new Dictionary<string, decimal> { ["Ana"] = 500m, ["Beto"] = 400m }),
+        };
+
+        Assert.Throws<ArgumentException>(() => SimplificadorDeDeudas.CalcularBalances(gastos));
+    }
 }
