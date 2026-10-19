@@ -9,6 +9,7 @@
   --primary-hover: #a4d9ae;
   --primary-ink: #0d1f19;
   --primary-soft: rgba(143, 203, 155, 0.14);
+  --accent: #79a8e0;
   --danger: #ff7b7f;
   color-scheme: dark;
 }
@@ -431,4 +432,118 @@ button.chip.on {
 
 .hint.bad {
   color: var(--danger);
+}
+
+/* Gráficos */
+.stats {
+  display: flex;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.stats > div {
+  flex: 1;
+  min-width: 0;
+  padding: 0.7rem 0.8rem;
+  background: var(--card-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.stat {
+  display: block;
+  font-size: 1.05rem;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stats .muted {
+  font-size: 0.78rem;
+}
+
+.leyenda {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0.9rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.leyenda span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.dot {
+  display: inline-block;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+}
+
+.dot-pagado {
+  background: var(--primary);
+}
+
+.dot-tocaba {
+  background: var(--accent);
+}
+
+.grafico {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.grafico-nombre {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.grafico-barras {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.barra-linea {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.barra-track {
+  flex: 1;
+  height: 0.55rem;
+  background: var(--card-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.barra {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.barra.pagado {
+  background: var(--primary);
+}
+
+.barra.tocaba {
+  background: var(--accent);
+}
+
+.barra-valor {
+  width: 5.5rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }

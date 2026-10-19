@@ -24,6 +24,7 @@ Dividí gastos con tus amigos y sabé quién le paga a quién, con la menor cant
 - **Historial de gastos** con opción de borrar, y las deudas se recalculan al instante.
 - **Resumen para WhatsApp**: un botón arma el texto con las deudas y los balances para mandarlo al grupo.
 - **Instalable como PWA**: se agrega a la pantalla de inicio y abre sin conexión (la app queda cacheada).
+- **Gráficos de gastos**: compara lo que puso cada persona con lo que le tocaba.
 - **Diseño mobile-first** con tema oscuro.
 
 <p align="center">
@@ -126,7 +127,7 @@ dotnet test
 - [ ] Gastos en pesos y dólares
 - [x] Resumen listo para compartir por WhatsApp
 - [x] Instalable como PWA
-- [ ] Gráficos de gastos
+- [x] Gráficos de gastos
 - [x] Demo online
 
 ## 📄 Licencia

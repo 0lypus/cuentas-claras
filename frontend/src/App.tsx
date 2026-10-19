@@ -14,17 +14,10 @@ import {
   type ModoReparto,
   type Transferencia,
 } from "./api";
+import { Avatar } from "./Avatar";
 import { fecha, plata } from "./formato";
+import { Graficos } from "./Graficos";
 import { generarResumen } from "./resumen";
-
-function Avatar({ nombre }: { nombre: string }) {
-  const hue = [...nombre].reduce((acc, c) => acc + c.charCodeAt(0), 0) % 360;
-  return (
-    <span className="avatar" style={{ background: `hsl(${hue} 45% 40%)` }}>
-      {nombre.charAt(0).toUpperCase()}
-    </span>
-  );
-}
 
 export default function App() {
   const [grupo, setGrupo] = useState<Grupo | null>(null);
@@ -346,6 +339,8 @@ function GrupoView({
           pueden ser menos que los gastos cargados.
         </p>
       </section>
+
+      <Graficos balances={balances} />
 
       <section className="card">
         <h3>Miembros</h3>
