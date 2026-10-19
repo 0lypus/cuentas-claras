@@ -14,8 +14,8 @@ import {
   type ModoReparto,
   type Transferencia,
 } from "./api";
-
-const plata = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" });
+import { fecha, plata } from "./formato";
+import { generarResumen } from "./resumen";
 
 function Avatar({ nombre }: { nombre: string }) {
   const hue = [...nombre].reduce((acc, c) => acc + c.charCodeAt(0), 0) % 360;
@@ -257,6 +257,28 @@ function GrupoView({
     setTimeout(() => setCopiado(false), 2000);
   }
 
+  async function compartirResumen() {
+    const texto = generarResumen(
+      grupo.nombre,
+      balances,
+      saldos,
+      gastos,
+      `${window.location.origin}/#/${codigo}`,
+    );
+
+    // En el celular conviene el menú nativo; en la compu cae directo en WhatsApp Web
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: grupo.nombre, text: texto });
+        return;
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+      }
+    }
+
+    window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, "_blank", "noopener");
+  }
+
   return (
     <>
       <section className="card">
@@ -275,7 +297,12 @@ function GrupoView({
       </section>
 
       <section className="card">
-        <h3>Quién le paga a quién</h3>
+        <div className="card-title">
+          <h3>Quién le paga a quién</h3>
+          <button className="btn btn-small" onClick={compartirResumen}>
+            💬 Compartir resumen
+          </button>
+        </div>
         {saldos.length === 0 ? (
           <p className="empty">Sin deudas pendientes 🎉</p>
         ) : (
@@ -477,7 +504,7 @@ function GrupoView({
               <div>
                 <strong>{g.descripcion}</strong>
                 <div className="muted">
-                  Pagó {g.pagadoPor} · {new Date(g.fecha).toLocaleDateString("es-AR")}
+                  Pagó {g.pagadoPor} · {fecha(g.fecha)}
                 </div>
                 <div className="muted">
                   {g.reparto.length > 0
