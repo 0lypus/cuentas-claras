@@ -22,6 +22,8 @@ Dividí gastos con tus amigos y sabé quién le paga a quién, con la menor cant
 - **Balance por persona**: cuánto puso cada uno, cuánto le tocaba y su saldo.
 - **Simplificación de deudas**: el algoritmo compensa lo que se debe entre sí y devuelve la menor cantidad de transferencias.
 - **Historial de gastos** con opción de borrar, y las deudas se recalculan al instante.
+- **Resumen para WhatsApp**: un botón arma el texto con las deudas y los balances para mandarlo al grupo.
+- **Instalable como PWA**: se agrega a la pantalla de inicio y abre sin conexión (la app queda cacheada).
 - **Diseño mobile-first** con tema oscuro.
 
 <p align="center">
@@ -120,10 +122,10 @@ dotnet test
 - [x] Gastos repartidos entre quienes participaron
 - [x] Balance por persona y simplificación de deudas
 - [x] Historial y borrado de gastos
-- [ ] Reparto por porcentaje o por ítem
+- [x] Reparto por porcentaje o por ítem
 - [ ] Gastos en pesos y dólares
-- [ ] Resumen listo para compartir por WhatsApp
-- [ ] Instalable como PWA
+- [x] Resumen listo para compartir por WhatsApp
+- [x] Instalable como PWA
 - [ ] Gráficos de gastos
 - [x] Demo online
 
