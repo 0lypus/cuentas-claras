@@ -435,3 +435,6 @@ FodyWeavers.xsd
 *.db-wal
 # APK generado
 *.apk
+
+# Ejecutable de Windows generado
+*.exe
