@@ -4,11 +4,17 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Ruta de la base SQLite. En un host con disco (Render con disco persistente) se apunta
+// DB_PATH a /data/cuentasclaras.db para que los grupos no se pierdan en cada deploy.
+// Sin disco, cualquier ruta (incluida esta) se borra al redesplegar.
+var dbPath = builder.Configuration["DB_PATH"] ?? "cuentasclaras.db";
+
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
 builder.Services.AddDbContext<CuentasClarasDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("Default") ?? "Data Source=cuentasclaras.db"));
+    options.UseSqlite($"Data Source={dbPath}",
+        sqlite => sqlite.MigrationsAssembly("CuentasClaras.Infra")));
 
 // Orígenes permitidos: configurables con la variable Cors__Origins (separados por coma)
 var origins = (builder.Configuration["Cors:Origins"] ?? "http://localhost:5173")
