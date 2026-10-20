@@ -134,10 +134,7 @@ Para abrirlo en Android Studio: `npm run android:open`. Si cambiás la URL de la
 
 ## 📦 Releases
 
-En [Releases](https://github.com/0lypus/cuentas-claras/releases) se publican los binarios listos para usar:
-
-- **`CuentasClaras-1.0.apk`**: la app para Android. Se instala en el celular habilitando “Instalar apps desconocidas”.
-- **`CuentasClaras.Api.exe`**: el backend para Windows, autocontenido (no hace falta instalar .NET). Doble clic y queda escuchando en `http://localhost:5000`; la base SQLite se crea al lado del ejecutable.
+En [Releases](https://github.com/0lypus/cuentas-claras/releases) se publica el APK listo para usar: **`CuentasClaras-1.0.apk`**, la app para Android. Se instala en el celular habilitando “Instalar apps desconocidas”.
 
 ## ☁️ Deploy
 
