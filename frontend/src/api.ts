@@ -46,7 +46,40 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     throw new Error((await res.text()) || `Error ${res.status}`);
   }
   if (res.status === 204) return undefined as T;
-  return res.json();
+  const data = await res.json();
+  registrarCampos(data);
+  return data;
+}
+
+/**
+ * Los servidores en uso (Render, local) no siempre tienen la última versión de la API.
+ * Acá se anota qué campos devolvió, para poder avisar si el servidor es viejo.
+ */
+export type CampoDeLaApi = "moneda";
+const camposVistos = new Set<CampoDeLaApi>();
+const observadores = new Set<() => void>();
+
+function registrarCampos(data: unknown) {
+  const antes = camposVistos.size;
+  if (Array.isArray(data)) {
+    if (data.some((x) => x && typeof x === "object" && "moneda" in x)) camposVistos.add("moneda");
+  } else if (data && typeof data === "object" && "moneda" in data) {
+    camposVistos.add("moneda");
+  }
+  if (camposVistos.size !== antes) observadores.forEach((f) => f());
+}
+
+/** Se suscribe a los cambios y devuelve la función para desuscribirse. */
+export function alCambiarCamposDeLaApi(fn: () => void) {
+  observadores.add(fn);
+  return () => {
+    observadores.delete(fn);
+  };
+}
+
+/** Campo que la API todavía no devuelve, o `null` si está todo al día. */
+export function camposDeLaApi(): CampoDeLaApi | null {
+  return camposVistos.has("moneda") ? null : "moneda";
 }
 
 export const crearGrupo = (nombre: string) =>

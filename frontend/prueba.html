@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="es-AR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#111f1a" />
+    <title>Cuentas Claras</title>
+  </head>
+  <body>
+    <main class="app">
+      <header class="brand">
+        <div class="logo">💸</div>
+        <h1>Cuentas Claras</h1>
+      </header>
+
+      <!-- 1) Crear grupo -->
+      <form class="card stack" onsubmit="event.preventDefault(); crear()">
+        <h3>Crear un grupo</h3>
+        <input id="nombre" value="Prueba APK" />
+        <button class="btn btn-primary" type="submit">Crear grupo</button>
+      </form>
+
+      <!-- 2) Abrir grupo existente -->
+      <form class="card stack" onsubmit="event.preventDefault(); abrir()">
+        <h3>¿Ya tenés un código?</h3>
+        <input id="codigo" placeholder="Código de invitación" />
+        <button class="btn" type="submit">Entrar al grupo</button>
+      </form>
+
+      <!-- 3) Agregar miembro -->
+      <form class="card row" id="form-miembro" onsubmit="event.preventDefault(); miembro()" hidden>
+        <input class="grow" id="miembro" placeholder="Nombre del nuevo miembro" />
+        <button class="btn btn-primary" type="submit">Agregar</button>
+      </form>
+
+      <!-- 4) Cargar gasto (con moneda) -->
+      <form class="card stack" id="form-gasto" onsubmit="event.preventDefault(); gasto()" hidden>
+        <h3>Cargar un gasto</h3>
+        <input id="descripcion" value="Cerveza" />
+        <input id="monto" type="number" inputmode="decimal" min="0" step="0.01" value="10" />
+        <div>
+          <label class="field-label">Moneda</label>
+          <div class="segmented" role="group" aria-label="Moneda del gasto">
+            <button type="button" class="on" id="mon-ARS" onclick="setMoneda('ARS')">Pesos ($)</button>
+            <button type="button" id="mon-USD" onclick="setMoneda('USD')">Dólares (US$)</button>
+          </div>
+        </div>
+        <div>
+          <label class="field-label">Pagó</label>
+          <select id="pagador"></select>
+        </div>
+        <div>
+          <label class="field-label">Se reparte entre</label>
+          <div class="chips" id="participantes"></div>
+        </div>
+        <button class="btn btn-primary" id="btn-gasto" type="submit">Agregar gasto</button>
+      </form>
+
+      <!-- 5) Compartir resumen -->
+      <div class="card" id="card-compartir" hidden>
+        <div class="card-title">
+          <h3>Quién le paga a quién</h3>
+          <button class="btn btn-small" type="button" onclick="compartir()">💬 Compartir resumen</button>
+        </div>
+        <div id="saldos"></div>
+        <p class="muted" style="margin-top: 0.75rem">
+          <button class="btn btn-small" type="button" onclick="copiarLink()">🔗 Copiar link</button>
+        </p>
+      </div>
+
+      <pre class="card" id="log" style="white-space: pre-wrap; font-size: 0.8rem"></pre>
+    </main>
+
+    <script type="module" src="/src/prueba.ts"></script>
+  </body>
+</html>

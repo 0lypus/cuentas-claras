@@ -18,15 +18,20 @@ import {
   type Transferencia,
 } from "./api";
 import { Avatar } from "./Avatar";
+import { camposDeLaApi, alCambiarCamposDeLaApi } from "./api";
 import { enlaceGrupo } from "./enlace";
 import { fecha, formatear, nombreMoneda } from "./formato";
 import { Graficos } from "./Graficos";
 import { generarResumen } from "./resumen";
 
+const avisoDeApiVieja = () =>
+  "El servidor todavía no tiene la versión con pesos y dólares. Cargá los gastos en pesos hasta que se actualice.";
+
 export default function App() {
   const [grupo, setGrupo] = useState<Grupo | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
+  const [aviso, setAviso] = useState("");
   const [nombre, setNombre] = useState("");
   const [codigo, setCodigo] = useState("");
 
@@ -42,6 +47,15 @@ export default function App() {
       .catch((e) => setError(e.message))
       .finally(() => setCargando(false));
   }, []);
+
+  // Los servidores viejos no devuelven "moneda": se avisa en vez de mostrar montos mal.
+  useEffect(
+    () =>
+      alCambiarCamposDeLaApi(() => {
+        setAviso(camposDeLaApi() === null ? "" : avisoDeApiVieja());
+      }),
+    [],
+  );
 
   async function abrir(e: FormEvent) {
     e.preventDefault();
@@ -90,7 +104,7 @@ export default function App() {
       {cargando ? (
         <p className="muted">Cargando...</p>
       ) : grupo ? (
-        <GrupoView grupo={grupo} onGrupo={setGrupo} onSalir={salir} />
+        <GrupoView grupo={grupo} onGrupo={setGrupo} onSalir={salir} aviso={aviso} />
       ) : (
         <>
           <form className="card stack" onSubmit={crear}>
@@ -128,10 +142,12 @@ function GrupoView({
   grupo,
   onGrupo,
   onSalir,
+  aviso = "",
 }: {
   grupo: Grupo;
   onGrupo: (g: Grupo) => void;
   onSalir: () => void;
+  aviso?: string;
 }) {
   const [nuevo, setNuevo] = useState("");
   const [descripcion, setDescripcion] = useState("");
@@ -300,6 +316,8 @@ function GrupoView({
 
   return (
     <>
+      {aviso && <p className="error">{aviso}</p>}
+
       <section className="card">
         <h2>{grupo.nombre}</h2>
         <div className="row">
