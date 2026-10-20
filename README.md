@@ -134,7 +134,7 @@ Para abrirlo en Android Studio: `npm run android:open`. Si cambiás la URL de la
 
 ## ☁️ Deploy
 
-- **Backend (Render)**: el servicio usa Docker con el `Dockerfile` de la raíz, contexto en la raíz (Root Directory vacío).
+- **Backend (Render)**: el servicio construye con **Root Directory: `backend`** (de ahí toma el `Dockerfile` que copia todo el proyecto).
   - `DB_PATH` (opcional): ruta del archivo SQLite. Para no perder los grupos en cada deploy hay que montar un **disco persistente** en `/data` y definir `DB_PATH=/data/cuentasclaras.db`; sin disco, la base se recrea vacía en cada deploy.
   - `Cors__Origins`: orígenes permitidos separados por coma (por ejemplo la URL de Vercel).
 - **Frontend (Vercel)**: build de `frontend` con `VITE_API_URL` apuntando a la API.
