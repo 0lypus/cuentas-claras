@@ -1,4 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { Capacitor } from "@capacitor/core";
+import { Share } from "@capacitor/share";
 import {
   agregarGasto,
   agregarMiembro,
@@ -16,6 +18,7 @@ import {
   type Transferencia,
 } from "./api";
 import { Avatar } from "./Avatar";
+import { enlaceGrupo } from "./enlace";
 import { fecha, formatear, nombreMoneda } from "./formato";
 import { Graficos } from "./Graficos";
 import { generarResumen } from "./resumen";
@@ -258,7 +261,7 @@ function GrupoView({
   }
 
   async function copiarLink() {
-    await navigator.clipboard.writeText(`${window.location.origin}/#/${codigo}`);
+    await navigator.clipboard.writeText(enlaceGrupo(codigo));
     setCopiado(true);
     setTimeout(() => setCopiado(false), 2000);
   }
@@ -269,10 +272,20 @@ function GrupoView({
       balances,
       saldos,
       gastos,
-      `${window.location.origin}/#/${codigo}`,
+      enlaceGrupo(codigo),
     );
 
-    // En el celular conviene el menú nativo; en la compu cae directo en WhatsApp Web
+    // En el APK conviene la hoja nativa; en el celular, el menú del sistema;
+    // en la compu cae directo en WhatsApp Web
+    if (Capacitor.isNativePlatform()) {
+      try {
+        await Share.share({ title: grupo.nombre, text: texto, dialogTitle: "Compartir resumen" });
+        return;
+      } catch {
+        // Si se cancela o falla, se prueba con el resto de opciones
+      }
+    }
+
     if (navigator.share) {
       try {
         await navigator.share({ title: grupo.nombre, text: texto });

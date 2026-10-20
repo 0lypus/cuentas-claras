@@ -433,3 +433,5 @@ FodyWeavers.xsd
 *.db
 *.db-shm
 *.db-wal
+# APK generado
+*.apk

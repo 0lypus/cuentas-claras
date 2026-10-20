@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Cuentas Claras</string>
+    <string name="title_activity_main">Cuentas Claras</string>
+    <string name="package_name">com.cuentasclaras.app</string>
+    <string name="custom_url_scheme">com.cuentasclaras.app</string>
+</resources>

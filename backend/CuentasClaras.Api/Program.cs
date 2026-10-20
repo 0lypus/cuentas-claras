@@ -12,7 +12,10 @@ builder.Services.AddDbContext<CuentasClarasDbContext>(options =>
 
 // Orígenes permitidos: configurables con la variable Cors__Origins (separados por coma)
 var origins = (builder.Configuration["Cors:Origins"] ?? "http://localhost:5173")
-    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+    .Concat(["http://localhost:5173", "https://localhost", "capacitor://localhost"])
+    .Distinct()
+    .ToArray();
 
 builder.Services.AddCors(o => o.AddPolicy("front", p =>
     p.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod()));

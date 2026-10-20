@@ -70,6 +70,7 @@ Los gastos pueden cargarse en pesos o en dólares. Cada moneda se compensa por s
 
 - **Backend**: ASP.NET Core (.NET 10), Entity Framework Core, SQLite
 - **Frontend**: React, TypeScript, Vite
+- **App Android**: Capacitor (el mismo frontend empaquetado como APK)
 - **Tests**: xUnit
 
 ## 📁 Estructura
@@ -112,6 +113,24 @@ npm run dev
 ```
 
 Abrí `http://localhost:5173`. La API escucha en `http://localhost:5140`.
+
+## 📱 App Android (APK)
+
+El APK empaqueta el mismo frontend con [Capacitor](https://capacitorjs.com) y consume la API configurada en `frontend/.env.production`.
+
+Necesitás **JDK 21** y el **Android SDK** (platform 36). Después:
+
+```bash
+cd frontend
+npm install
+npm run android:apk
+```
+
+El APK de debug queda en `frontend/android/app/build/outputs/apk/debug/app-debug.apk` y se instala en el celular habilitando “Instalar apps desconocidas”.
+
+Para abrirlo en Android Studio: `npm run android:open`. Si cambiás la URL de la API, editá `frontend/.env.production` y volvé a generar el APK.
+
+> La API tiene que permitir el origen del APK (`https://localhost` y `capacitor://localhost`); el backend ya los incluye por defecto.
 
 ## 🧪 Tests
 
