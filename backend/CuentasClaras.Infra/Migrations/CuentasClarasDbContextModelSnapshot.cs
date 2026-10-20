@@ -60,6 +60,13 @@ namespace CuentasClaras.Infra.Migrations
                     b.Property<int>("GrupoId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Moneda")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(3)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("ARS");
+
                     b.Property<decimal>("Monto")
                         .HasPrecision(18, 2)
                         .HasColumnType("TEXT");

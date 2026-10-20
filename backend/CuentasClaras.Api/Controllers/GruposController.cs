@@ -81,6 +81,7 @@ public class GruposController(CuentasClarasDbContext db) : ControllerBase
                 g.Id,
                 g.Descripcion,
                 g.Monto,
+                g.Moneda,
                 g.PagadoPor.Nombre,
                 g.Participantes.Select(p => p.Nombre).ToList(),
                 g.Fecha,
@@ -117,6 +118,10 @@ public class GruposController(CuentasClarasDbContext db) : ControllerBase
         var modo = (req.ModoReparto ?? "igual").Trim().ToLowerInvariant();
         if (modo is not ("igual" or "porcentaje" or "montos"))
             return BadRequest("El modo de reparto tiene que ser \"igual\", \"porcentaje\" o \"montos\".");
+
+        var moneda = Monedas.Normalizar(req.Moneda);
+        if (!Monedas.EsSoportada(moneda))
+            return BadRequest("La moneda tiene que ser ARS o USD.");
 
         var grupo = await db.Grupos
             .Include(g => g.Miembros)
@@ -161,6 +166,7 @@ public class GruposController(CuentasClarasDbContext db) : ControllerBase
         {
             Descripcion = req.Descripcion.Trim(),
             Monto = monto,
+            Moneda = moneda,
             PagadoPor = pagador,
             Participantes = participantes
         };
@@ -174,7 +180,7 @@ public class GruposController(CuentasClarasDbContext db) : ControllerBase
         grupo.Gastos.Add(gasto);
         await db.SaveChangesAsync();
 
-        return Ok(new GastoDto(gasto.Id, gasto.Descripcion, gasto.Monto, pagador.Nombre, gasto.Fecha));
+        return Ok(new GastoDto(gasto.Id, gasto.Descripcion, gasto.Monto, gasto.Moneda, pagador.Nombre, gasto.Fecha));
     }
 
     [HttpGet("{codigo}/saldos")]
@@ -217,7 +223,8 @@ public class GruposController(CuentasClarasDbContext db) : ControllerBase
         g.Participantes.Select(p => p.Nombre).ToList(),
         g.Reparto.Count == 0
             ? null
-            : g.Reparto.ToDictionary(d => d.Miembro.Nombre, d => d.Monto));
+            : g.Reparto.ToDictionary(d => d.Miembro.Nombre, d => d.Monto),
+        g.Moneda);
 
     private static GrupoDto ToDto(Grupo g) => new(
         g.Id,

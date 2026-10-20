@@ -7,7 +7,9 @@ export type Grupo = {
   codigoInvitacion: string;
   miembros: Miembro[];
 };
-export type Transferencia = { de: string; a: string; monto: number };
+export type Moneda = "ARS" | "USD";
+
+export type Transferencia = { de: string; a: string; monto: number; moneda: Moneda };
 
 export type ModoReparto = "igual" | "porcentaje" | "montos";
 
@@ -18,6 +20,7 @@ export type NuevoGasto = {
   participantesIds: number[];
   modoReparto?: ModoReparto;
   reparto?: { miembroId: number; valor: number }[];
+  moneda: Moneda;
 };
 
 export type DetalleReparto = { nombre: string; monto: number };
@@ -26,6 +29,7 @@ export type Gasto = {
   id: number;
   descripcion: string;
   monto: number;
+  moneda: Moneda;
   pagadoPor: string;
   participantes: string[];
   reparto: DetalleReparto[];
@@ -73,7 +77,13 @@ export const obtenerSaldos = (codigo: string) =>
   request<Transferencia[]>(`/api/grupos/${codigo}/saldos`);
 
 
-export type Balance = { nombre: string; pagado: number; corresponde: number; saldo: number };
+export type Balance = {
+  nombre: string;
+  pagado: number;
+  corresponde: number;
+  saldo: number;
+  moneda: Moneda;
+};
 
 export const obtenerBalances = (codigo: string) =>
   request<Balance[]>(`/api/grupos/${codigo}/balances`);

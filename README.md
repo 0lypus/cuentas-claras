@@ -18,7 +18,8 @@ Dividí gastos con tus amigos y sabé quién le paga a quién, con la menor cant
 ## ✨ Funcionalidades
 
 - **Grupos con link de invitación**: sin registro, cualquiera con el link entra al grupo.
-- **Gastos repartidos a medida**: elegís quién pagó y entre quiénes se reparte (no hace falta que participen todos).
+- **Gastos repartidos a medida**: elegís quién pagó y entre quiénes se reparte (no hace falta que participen todos), en partes iguales, por porcentaje o con montos fijos.
+- **Pesos y dólares**: cada gasto se carga en su moneda y los balances y deudas se calculan por separado (no se convierten entre sí).
 - **Balance por persona**: cuánto puso cada uno, cuánto le tocaba y su saldo.
 - **Simplificación de deudas**: el algoritmo compensa lo que se debe entre sí y devuelve la menor cantidad de transferencias.
 - **Historial de gastos** con opción de borrar, y las deudas se recalculan al instante.
@@ -62,6 +63,8 @@ Después se cruza al mayor deudor con el mayor acreedor hasta dejar todo en cero
 Sin compensar, Esteban le tendría que haber pagado $14.000 a Agustín por la carne. Como él puso $18.000 en bebidas, termina pagando solo $4.000. La lógica está en [`SimplificadorDeDeudas.cs`](backend/CuentasClaras.Core/Services/SimplificadorDeDeudas.cs) y cubierta con tests.
 
 El reparto trabaja con centavos: si un monto no se divide exacto entre los participantes, el centavo sobrante se asigna a uno de ellos para que la suma siempre cierre.
+
+Los gastos pueden cargarse en pesos o en dólares. Cada moneda se compensa por separado: nunca se suman ni se convierten automáticamente, así que un grupo puede tener deudas en ambas monedas a la vez.
 
 ## 🛠 Stack
 
@@ -124,7 +127,7 @@ dotnet test
 - [x] Balance por persona y simplificación de deudas
 - [x] Historial y borrado de gastos
 - [x] Reparto por porcentaje o por ítem
-- [ ] Gastos en pesos y dólares
+- [x] Gastos en pesos y dólares
 - [x] Resumen listo para compartir por WhatsApp
 - [x] Instalable como PWA
 - [x] Gráficos de gastos

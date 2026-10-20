@@ -1,3 +1,5 @@
+using CuentasClaras.Core.Models;
+
 namespace CuentasClaras.Core.Entities;
 
 public class GastoRegistrado
@@ -6,6 +8,7 @@ public class GastoRegistrado
     public int GrupoId { get; set; }
     public string Descripcion { get; set; } = string.Empty;
     public decimal Monto { get; set; }
+    public string Moneda { get; set; } = Monedas.Peso;
     public DateTime Fecha { get; set; } = DateTime.UtcNow;
 
     public int PagadoPorId { get; set; }

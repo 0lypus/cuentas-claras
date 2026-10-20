@@ -547,3 +547,16 @@ button.chip.on {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+
+.moneda-titulo {
+  margin: 0.9rem 0 0.2rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.moneda-titulo:first-child {
+  margin-top: 0;
+}

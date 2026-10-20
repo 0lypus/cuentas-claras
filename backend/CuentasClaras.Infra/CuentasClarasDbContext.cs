@@ -1,4 +1,5 @@
 using CuentasClaras.Core.Entities;
+using CuentasClaras.Core.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace CuentasClaras.Infra;
@@ -27,6 +28,7 @@ public class CuentasClarasDbContext(DbContextOptions<CuentasClarasDbContext> opt
         {
             g.Property(x => x.Descripcion).HasMaxLength(200).IsRequired();
             g.Property(x => x.Monto).HasPrecision(18, 2);
+            g.Property(x => x.Moneda).HasMaxLength(3).IsRequired().HasDefaultValue(Monedas.Peso);
 
             g.HasOne(x => x.Grupo).WithMany(x => x.Gastos).HasForeignKey(x => x.GrupoId);
 

@@ -12,10 +12,11 @@ import {
   type Gasto,
   type Grupo,
   type ModoReparto,
+  type Moneda,
   type Transferencia,
 } from "./api";
 import { Avatar } from "./Avatar";
-import { fecha, plata } from "./formato";
+import { fecha, formatear, nombreMoneda } from "./formato";
 import { Graficos } from "./Graficos";
 import { generarResumen } from "./resumen";
 
@@ -135,6 +136,7 @@ function GrupoView({
   const [pagadoPorId, setPagadoPorId] = useState("");
   const [excluidos, setExcluidos] = useState<number[]>([]);
   const [modo, setModo] = useState<ModoReparto>("igual");
+  const [moneda, setMoneda] = useState<Moneda>("ARS");
   const [valores, setValores] = useState<Record<number, string>>({});
   const [saldos, setSaldos] = useState<Transferencia[]>([]);
   const [balances, setBalances] = useState<Balance[]>([]);
@@ -146,7 +148,17 @@ function GrupoView({
   const pagador = pagadoPorId || String(grupo.miembros[0]?.id ?? "");
   const participantes = grupo.miembros.filter((m) => !excluidos.includes(m.id));
   const participantesIds = participantes.map((m) => m.id);
-  const totalGastado = gastos.reduce((acc, g) => acc + g.monto, 0);
+
+  const totales = gastos.reduce<Record<string, number>>((acc, g) => {
+    acc[g.moneda] = (acc[g.moneda] ?? 0) + g.monto;
+    return acc;
+  }, {});
+  const totalesTexto = (Object.keys(totales) as Moneda[])
+    .map((m) => formatear(totales[m], m))
+    .join(" · ");
+
+  const monedasSaldos = [...new Set(saldos.map((t) => t.moneda))];
+  const monedasBalances = [...new Set(balances.map((b) => b.moneda))];
 
   const montoNum = Number(monto) || 0;
   const sumaReparto = participantes.reduce((acc, m) => acc + (Number(valores[m.id]) || 0), 0);
@@ -190,6 +202,7 @@ function GrupoView({
       await agregarGasto(codigo, {
         descripcion,
         monto: montoNum,
+        moneda,
         pagadoPorId: Number(pagador),
         participantesIds,
         modoReparto: modo,
@@ -212,7 +225,7 @@ function GrupoView({
   }
 
   async function onEliminarGasto(g: Gasto) {
-    if (!window.confirm(`¿Borrar "${g.descripcion}" (${plata.format(g.monto)})?`)) return;
+    if (!window.confirm(`¿Borrar "${g.descripcion}" (${formatear(g.monto, g.moneda)})?`)) return;
     try {
       setError("");
       await eliminarGasto(codigo, g.id);
@@ -299,13 +312,21 @@ function GrupoView({
         {saldos.length === 0 ? (
           <p className="empty">Sin deudas pendientes 🎉</p>
         ) : (
-          saldos.map((t, i) => (
-            <div className="debt" key={i}>
-              <Avatar nombre={t.de} />
-              <span className="who">
-                <strong>{t.de}</strong> <span className="muted">le paga a</span> <strong>{t.a}</strong>
-              </span>
-              <span className="amount">{plata.format(t.monto)}</span>
+          monedasSaldos.map((m) => (
+            <div key={m}>
+              {monedasSaldos.length > 1 && <p className="moneda-titulo">{nombreMoneda(m)}</p>}
+              {saldos
+                .filter((t) => t.moneda === m)
+                .map((t, i) => (
+                  <div className="debt" key={`${t.de}-${t.a}-${i}`}>
+                    <Avatar nombre={t.de} />
+                    <span className="who">
+                      <strong>{t.de}</strong> <span className="muted">le paga a</span>{" "}
+                      <strong>{t.a}</strong>
+                    </span>
+                    <span className="amount">{formatear(t.monto, t.moneda)}</span>
+                  </div>
+                ))}
             </div>
           ))
         )}
@@ -317,19 +338,29 @@ function GrupoView({
           <p className="empty">Todavía no hay movimientos.</p>
         ) : (
           <div>
-            {balances.map((b) => (
-              <div className="balance" key={b.nombre}>
-                <Avatar nombre={b.nombre} />
-                <div className="who">
-                  <strong>{b.nombre}</strong>
-                  <div className="muted">
-                    Pagó {plata.format(b.pagado)} · le tocaba {plata.format(b.corresponde)}
-                  </div>
-                </div>
-                <span className={`amount ${b.saldo > 0 ? "pos" : b.saldo < 0 ? "neg" : ""}`}>
-                  {b.saldo > 0 ? "+" : ""}
-                  {plata.format(b.saldo)}
-                </span>
+            {monedasBalances.map((m) => (
+              <div key={m}>
+                {monedasBalances.length > 1 && (
+                  <p className="moneda-titulo">{nombreMoneda(m)}</p>
+                )}
+                {balances
+                  .filter((b) => b.moneda === m)
+                  .map((b) => (
+                    <div className="balance" key={`${b.nombre}-${b.moneda}`}>
+                      <Avatar nombre={b.nombre} />
+                      <div className="who">
+                        <strong>{b.nombre}</strong>
+                        <div className="muted">
+                          Pagó {formatear(b.pagado, b.moneda)} · le tocaba{" "}
+                          {formatear(b.corresponde, b.moneda)}
+                        </div>
+                      </div>
+                      <span className={`amount ${b.saldo > 0 ? "pos" : b.saldo < 0 ? "neg" : ""}`}>
+                        {b.saldo > 0 ? "+" : ""}
+                        {formatear(b.saldo, b.moneda)}
+                      </span>
+                    </div>
+                  ))}
               </div>
             ))}
           </div>
@@ -384,6 +415,27 @@ function GrupoView({
             onChange={(e) => setMonto(e.target.value)}
             placeholder="Monto"
           />
+          <div>
+            <label className="field-label">Moneda</label>
+            <div className="segmented" role="group" aria-label="Moneda del gasto">
+              {(
+                [
+                  ["ARS", "Pesos ($)"],
+                  ["USD", "Dólares (US$)"],
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  type="button"
+                  key={id}
+                  className={moneda === id ? "on" : ""}
+                  aria-pressed={moneda === id}
+                  onClick={() => setMoneda(id)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
           <div>
             <label className="field-label">Pagó</label>
             <select value={pagador} onChange={(e) => setPagadoPorId(e.target.value)}>
@@ -467,7 +519,7 @@ function GrupoView({
                 <p className={`hint ${repartoValido ? "" : "bad"}`}>
                   {modo === "porcentaje"
                     ? `Suma ${sumaReparto.toLocaleString("es-AR", { maximumFractionDigits: 2 })}% de 100%`
-                    : `Suma ${plata.format(sumaReparto)} de ${plata.format(montoNum)}`}
+                    : `Suma ${formatear(sumaReparto, moneda)} de ${formatear(montoNum, moneda)}`}
                 </p>
               )}
             </div>
@@ -488,7 +540,7 @@ function GrupoView({
         <h3>Historial de gastos</h3>
         {gastos.length > 0 && (
           <p className="total">
-            Total gastado: <strong>{plata.format(totalGastado)}</strong>
+            Total gastado: <strong>{totalesTexto}</strong>
           </p>
         )}
         {gastos.length === 0 ? (
@@ -504,13 +556,13 @@ function GrupoView({
                 <div className="muted">
                   {g.reparto.length > 0
                     ? `Reparto: ${g.reparto
-                        .map((r) => `${r.nombre} ${plata.format(r.monto)}`)
+                        .map((r) => `${r.nombre} ${formatear(r.monto, g.moneda)}`)
                         .join(" · ")}`
                     : `Entre ${g.participantes.join(", ")}`}
                 </div>
               </div>
               <div className="row" style={{ flexWrap: "nowrap" }}>
-                <span className="amount">{plata.format(g.monto)}</span>
+                <span className="amount">{formatear(g.monto, g.moneda)}</span>
                 <button className="btn-icon" onClick={() => onEliminarGasto(g)} title="Borrar gasto">
                   🗑
                 </button>
